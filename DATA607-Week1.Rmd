@@ -1,0 +1,77 @@
+---
+title: "Week 1 Assignment DATA 607"
+author: "Brad Harbans"
+date: "2/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RCurl)
+library(tidyverse)
+library(reactable)
+```
+
+## Introduction
+
+The article that I have chosen is called "Should Travelers Avoid Flying Airlines That Have Had Crashes in the Past? ". It looks at data collected about the number of incidents and fatal incidents that airlines have had in two time periods, from 1985-1989 and from 2000-2014. There are a number of questions that can be examined when looking at this data. Such as, does a history of previous incidents predict future incidents? 
+
+Please find a link to the article below. <https://fivethirtyeight.com/features/should-travelers-avoid-flying-airlines-that-have-had-crashes-in-the-past/>.
+
+## Analysis
+
+Load the data from the github repository provided on the article above.
+
+```{r load-data}
+x <- getURL('https://raw.githubusercontent.com/fivethirtyeight/data/master/airline-safety/airline-safety.csv')
+airlinesafety <- read.csv(text = x)
+```
+
+I will now give the column's more meaningful names.
+
+```{r column-names}
+names(airlinesafety)=c("Airline","Available Seat Kilometers Per Week","Incidents 1985-1999","Fatal Accidents 1985-1999","Fatalities 1985-1999","Incidents 2000-2014","Fatal Accidents 2000-2014","Fatalities 2000-2014")
+colnames(airlinesafety)
+```
+
+The article makes use of a safety score as defined below. [^1]
+
+[^1]: The subsequent text was taken directly from the article, <https://fivethirtyeight.com/features/should-travelers-avoid-flying-airlines-that-have-had-crashes-in-the-past/>. I have tried to reproduce the score in the code below.
+
+-   For each category, subtract an airline's crash rate from the average for all airlines since 1985. This gives safer airlines positive scores and less safe airlines negative scores.
+-   Multiply the result by the square root of the number of seat kilometers flown. This gives more credit to an airline that has achieved a strong safety record over a larger sample of flights.
+-   Standardize the score in each category to calculate how many standard deviations an airline is above or below the mean. Then average the scores from the three categories together. This is the safety score.
+
+```{r create-safetyscore}
+airlinesafety <- mutate(airlinesafety, "Safety Score 1985-1999 Incidents" = (mean(airlinesafety$`Incidents 1985-1999`) -`Incidents 1985-1999`) * sqrt( `Available Seat Kilometers Per Week` ) )
+airlinesafety <- mutate(airlinesafety, "Safety Score 1985-1999 Fatal Accidents" = (mean(airlinesafety$`Fatal Accidents 1985-1999`) -`Fatal Accidents 1985-1999`) * sqrt( `Available Seat Kilometers Per Week` ) )
+airlinesafety <- mutate(airlinesafety, "Safety Score 1985-1999 Fatalities" = (mean(airlinesafety$`Fatalities 1985-1999`) -`Fatalities 1985-1999`) * sqrt( `Available Seat Kilometers Per Week` ) )
+
+airlinesafety <- mutate(airlinesafety, "Safety Score 2000-2014 Incidents" = (mean(airlinesafety$`Incidents 2000-2014`) -`Incidents 2000-2014`) * sqrt( `Available Seat Kilometers Per Week` ) )
+airlinesafety <- mutate(airlinesafety, "Safety Score 2000-2014 Fatal Accidents" = (mean(airlinesafety$`Fatal Accidents 2000-2014`) -`Fatal Accidents 2000-2014`) * sqrt( `Available Seat Kilometers Per Week` ) )
+airlinesafety <- mutate(airlinesafety, "Safety Score 2000-2014 Fatalities" = (mean(airlinesafety$`Fatalities 1985-1999`) -`Fatalities 1985-1999`) * sqrt( `Available Seat Kilometers Per Week` ) )
+
+airlinesafety$"Safety Score 1985-1999 Incidents Normalized" = scale( airlinesafety$"Safety Score 1985-1999 Incidents" ) 
+airlinesafety$"Safety Score 1985-1999 Fatal Accidents Normalized" = scale( airlinesafety$"Safety Score 1985-1999 Fatal Accidents" )
+airlinesafety$"Safety Score 1985-1999 Fatalities Normalized" = scale( airlinesafety$"Safety Score 1985-1999 Fatalities" )
+
+airlinesafety$"Safety Score 2000-2014 Incidents Normalized" = scale( airlinesafety$"Safety Score 2000-2014 Incidents" ) 
+airlinesafety$"Safety Score 2000-2014 Fatal Accidents Normalized" = scale( airlinesafety$"Safety Score 2000-2014 Fatal Accidents" )
+airlinesafety$"Safety Score 2000-2014 Fatalities Normalized" = scale( airlinesafety$"Safety Score 2000-2014 Fatalities" )
+
+airlinesafety <- mutate ( airlinesafety , "Average Safety Score 1985-1999"= rowMeans( select(airlinesafety ,"Safety Score 1985-1999 Incidents Normalized" ,"Safety Score 1985-1999 Fatal Accidents Normalized", "Safety Score 1985-1999 Fatalities Normalized"  ) ) )
+
+airlinesafety <- mutate ( airlinesafety , "Average Safety Score 2000-2014"= rowMeans( select(airlinesafety ,"Safety Score 2000-2014 Incidents Normalized" ,"Safety Score 2000-2014 Fatal Accidents Normalized", "Safety Score 2000-2014 Fatalities Normalized"  ) ) )
+
+airlinesafety <- mutate(airlinesafety, "Increase in Score" = ifelse((airlinesafety$"Average Safety Score 1985-1999" <  airlinesafety$"Average Safety Score 2000-2014"), "True","False"))
+```
+
+For the sake of this assignment I will only display the safety scores for the periods from  1985-1999 and from 2000-2014. 
+```{r display-safety-scores}
+reactable ( select(airlinesafety,"Airline","Average Safety Score 1985-1999","Average Safety Score 2000-2014","Increase in Score"))
+```
+
+## Conclusion
+
+Although, not directly analyzed in this assignment, the data did suggest that there was as weak correlation between previous incidents and future incidents for a given airline. The article went on to further associate each airline and country of origin, and based on GDP for each country, was able to find a stronger correlation between development of a country and the safety of the airline. This may be due to stricter safety rules that exists in more developed countries. 
+
