@@ -124,7 +124,7 @@ hw2DB <- dbConnect(RMariaDB::MariaDB(), user='Data607_HW2_admin', password=keyri
 
 ### Import Data from Data Frame into SQL
 I will begin by truncating the tables, in order to remove any information that may exist in the tables. 
-```{r truncate-tables}
+```{r truncate-tables, results='hide'}
 dbExecute(hw2DB, "SET FOREIGN_KEY_CHECKS = 0")
 dbExecute(hw2DB, "TRUNCATE TABLE Reviews;")
 dbExecute(hw2DB, "TRUNCATE TABLE Reviewers;")
@@ -164,7 +164,7 @@ I will now import the reviews into the reviews table.
 ```{r import-reviews}
 for ( movie in movieList$Movie_Name)
 {
-  ratings_per_movie <-select(movieRatings, movie, ID)
+  ratings_per_movie <-select(movieRatings, all_of(movie), ID)
   
   for ( row in 1: nrow(ratings_per_movie ))
   {
@@ -198,8 +198,8 @@ head(queryResults)
 
 ### Create a Bar Plot of the Data
 I will now create a bar plot using the data obtained from the SQL query. 
-```{r create-bar-plot}
-ggplot( queryResults , aes(x = reorder(Movie_Name,Rating), y=Rating, na.rm = TRUE, fill=Movie_Name)) + geom_bar(stat ="identity") + 
+```{r create-bar-plot, warning=FALSE}
+ggplot( queryResults , aes(fct_reorder(Movie_Name,Rating), Rating, na.rm = TRUE, fill=Movie_Name)) + geom_col() + 
   ggtitle("Movie Ratings") +
   labs(x = "Movie") +
   coord_flip()
