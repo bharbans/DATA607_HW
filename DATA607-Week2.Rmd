@@ -1,0 +1,210 @@
+---
+title: "Week 2 Assignment"
+author: "Brad Harbans"
+date: "2/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Introduction
+
+In this assignment we have been asked to conduct a survey rating movies on a scale from 1-5. For this assignment, my classmate Sean Connin, has created a survey based on the 10 most watched TV shows on Netflix in 2020. Several other students including myself took this survey and Mr. Connin made the results availble for download using the link: <https://docs.google.com/spreadsheets/d/e/2PACX-1vS5gVduzjwCsx8WgIS10SgtpZ_bxXh7norv5tlMp9m4M69pgymjEZTedJ6R47e331yYb-zouyK8nfJJ/pub?gid=77977337&single=true&output=csv>.
+
+The following movies were evaluated: The Queens Gambit,Emily in Paris, Lucifer, The Umbrella Academy, Money Heist, Dark Desire, Friends, The Crown, and Ratched. These were rated as poor, fair, average, good and excellent an option was also presented for having not seen the movie.
+
+For the purposes of this assignment, I have installed MariaDB on a virtual machine running locally from my computer. I have also created a database named 'Data607_HW2' and created an account that was granted all privileges to that database.
+
+The raw CSV file has the following headers: 
+```{r importCSVFromGoogle} 
+library(RCurl)
+fileUrl <- 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5gVduzjwCsx8WgIS10SgtpZ_bxXh7norv5tlMp9m4M69pgymjEZTedJ6R47e331yYb-zouyK8nfJJ/pub?gid=77977337&single=true&output=csv'
+fileCSV <- getURL(fileUrl,.opts=list(ssl.verifypeer=FALSE , followlocation = TRUE))
+
+movieRatings <- read.csv(textConnection(fileCSV))
+
+colnames(movieRatings)
+```
+
+I will now select only the columns that I am interested in, those that have the ratings and one additional column that has the hours per week that the individual spends watching Netflix. I will also rename the columns with simpler names. I will also add a column for the ID of a participant, this will be used to identifiy the individual that took the survey. 
+
+```{r select-subset-of-csv}
+movieRatings <- movieRatings %>% 
+  select ( starts_with('Top.10.Most.Watched.Netflix.Shows.in.2020') , starts_with('On.average..how.many.hours.a.week.do.you.s'), Timestamp )
+
+movieRatings <- movieRatings %>% 
+  dplyr::rename(
+"The_Queens_Gambit" = "Top.10.Most.Watched.Netflix.Shows.in.2020..The.Queens.Gambit.",
+"Emily_in_Paris" = "Top.10.Most.Watched.Netflix.Shows.in.2020..Emily.in.Paris.",
+"Lucifer" = "Top.10.Most.Watched.Netflix.Shows.in.2020..Lucifer.",
+"The_Umbrella_Academy" = "Top.10.Most.Watched.Netflix.Shows.in.2020..The.Umbrella.Academy.",
+"Money_Heist" = "Top.10.Most.Watched.Netflix.Shows.in.2020..Money.Heist.",
+"Dark_Desire" = "Top.10.Most.Watched.Netflix.Shows.in.2020..Dark.Desire.",
+"Friends" = "Top.10.Most.Watched.Netflix.Shows.in.2020..Friends.",
+"The_Crown" = "Top.10.Most.Watched.Netflix.Shows.in.2020..The.Crown.",
+"Ratched" = "Top.10.Most.Watched.Netflix.Shows.in.2020..Ratched.",
+"Dark" = "Top.10.Most.Watched.Netflix.Shows.in.2020..Dark." ,                
+"hrs_per_week" = "On.average..how.many.hours.a.week.do.you.spend.on.Netflix.each.week.")
+
+movieRatings <- tibble::rowid_to_column(movieRatings, "ID")
+```
+
+I will now cast the columns as an ordered factor, and then as a numeric to force into a scale from 1-5. N.B. The case that someone did not watch the movie, was not introduced in the ordered ratings vector. As such, the did not watch response has been replaced with the R logical constant 'NA'. This can be seen by looking at the head of the data frame. 
+
+```{r cast-as-factor }
+library(lubridate) # Needed in order to convert google sheets format to R POSIXct.  
+
+ratings =  c("Poor", "Fair", "Average", "Good","Excellent")
+
+for ( i in colnames(select(movieRatings, -"hrs_per_week", -"ID" , -"Timestamp")))
+{
+  movieRatings[,i] <- ordered(movieRatings[,i], levels = ratings)
+  movieRatings[,i] <- as.numeric(movieRatings[,i])
+}
+
+movieRatings <- movieRatings %>% mutate (Timestamp = parse_date_time(Timestamp,'mdy HMS', tz = 'EST') ) 
+
+head(movieRatings)
+
+```
+
+### Create Database
+
+Use the following to create a database to be used for this assignment, an account that will be used to connect to the database.
+
+```{sql create-db, eval = FALSE}
+CREATE DATABASE Data607_HW2;
+CREATE USER 'Data607_HW2_admin'@'%' IDENTIFIED BY 'Insert Good Password Here';
+GRANT ALL PRIVILEGES ON Data607_HW2 TO 'Data607_HW2_admin'@'%';
+```
+
+### Create tables
+
+I have created three tables for this assignment. One table corresponds to the reviewer, another to the movies, and the last to the ratings that they submitted. The primary key information can be found in the SQL code below. These were created in this way to ensure the tables are normalized. 
+
+```{sql create-tables, eval = FALSE}
+CREATE TABLE IF NOT EXISTS Reviewers
+(
+  Reviewer_ID int(20) UNSIGNED PRIMARY KEY ,
+  time_submitted DATETIME 
+);
+
+CREATE TABLE IF NOT EXISTS Movies
+(
+  Movie_ID int(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY ,
+  Movie_Name VARCHAR(200)
+);
+
+CREATE TABLE IF NOT EXISTS Reviews
+(
+  Review_ID int(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY ,
+  Movie_ID int UNSIGNED,
+  Rating int(6) UNSIGNED,
+  Reviewer_ID int UNSIGNED NOT NULL,
+  FOREIGN KEY (Reviewer_ID) REFERENCES Reviewers(Reviewer_ID),
+  FOREIGN KEY (Movie_ID) REFERENCES Movies(Movie_ID)
+);
+```
+### Connect to Database Using R
+
+I will be using the RMariaDB package to connect to my database. 
+
+```{r load-rmariadb}
+library(RMariaDB)
+library(keyring)
+```
+
+For this assignment, I will store my database password in my computers local credential store, the login Keychain on Mac OS X, and use the keyring package to securely retrieve this password. 
+```{r open-sql-connection }
+hw2DB <- dbConnect(RMariaDB::MariaDB(), user='Data607_HW2_admin', password=keyring::key_get("Data607_HW2_admin") , dbname='Data607_HW2', host='172.16.166.3')
+```
+
+### Import Data from Data Frame into SQL
+I will begin by truncating the tables, in order to remove any information that may exist in the tables. 
+```{r truncate-tables}
+dbExecute(hw2DB, "SET FOREIGN_KEY_CHECKS = 0")
+dbExecute(hw2DB, "TRUNCATE TABLE Reviews;")
+dbExecute(hw2DB, "TRUNCATE TABLE Reviewers;")
+dbExecute(hw2DB, "TRUNCATE TABLE Movies;")
+dbExecute(hw2DB, "SET FOREIGN_KEY_CHECKS = 1")
+```
+
+I will now import the relevant columns in the movieRatings data frame into the Reviewers table. 
+```{r import-data-reviewers}
+dbWriteTable(hw2DB,"Reviewers", 
+             setNames(select(movieRatings,ID,Timestamp) ,dbListFields(hw2DB,"Reviewers")), 
+             append = TRUE
+             )
+```
+
+I will now import the movies table.  
+
+```{r import-movie-names}
+
+movieList <- data.frame( Movie_Name = c(
+          "The_Queens_Gambit",
+          "Emily_in_Paris",
+          "Lucifer",
+          "The_Umbrella_Academy",
+          "Money_Heist",
+          "Dark_Desire",
+          "Friends",
+          "The_Crown",
+          "Ratched",
+          "Dark") )
+
+dbWriteTable(hw2DB,"Movies", movieList, append = TRUE)
+```
+
+I will now import the reviews into the reviews table. 
+
+```{r import-reviews}
+for ( movie in movieList$Movie_Name)
+{
+  ratings_per_movie <-select(movieRatings, movie, ID)
+  
+  for ( row in 1: nrow(ratings_per_movie ))
+  {
+    movie_name <- movie
+    rating <- ratings_per_movie[row, movie ]
+    ID <- ratings_per_movie[ row, "ID" ]
+
+    query <- "INSERT INTO Reviews
+    (Movie_ID, Rating, Reviewer_ID)
+    VALUES
+    ( (SELECT Movie_ID FROM Movies WHERE Movie_Name = ? ) , ? , ?)"
+    
+    dbExecute(hw2DB,query,list(movie_name,rating, ID))
+
+  }
+}
+
+```
+
+### Querying the Database for information.
+
+Although the information that I need is already stored in various data frames, as required by the assignment, I will query the database for the information located in the movie and reviews tables. 
+```{r import-data-from-sql}
+query <- "SELECT Reviews.*, Movies.Movie_Name
+FROM Reviews INNER JOIN Movies 
+ON Reviews.Movie_ID = Movies.Movie_ID"
+queryResults<-dbGetQuery(hw2DB,query)
+
+head(queryResults)
+```
+
+### Create a Bar Plot of the Data
+I will now create a bar plot using the data obtained from the SQL query. 
+```{r create-bar-plot}
+ggplot( queryResults , aes(x = reorder(Movie_Name,Rating), y=Rating, na.rm = TRUE, fill=Movie_Name)) + geom_bar(stat ="identity") + 
+  ggtitle("Movie Ratings") +
+  labs(x = "Movie") +
+  coord_flip()
+```
+
+### Conclusion
+
+In this lab we took data from a survey that we conducted and inserted this into a SQL database. I performed some basic manipulation of the data before insertion and then retrieved some of the data. Based on the number of ratings, it would seem as though Friends is the highest rated show, followed by the Queens Gambit. However, there were a lot of responses in which the individual reviewer did not watch the movies. 
