@@ -1,0 +1,130 @@
+---
+title: "DATA 607 Week 3 Assignment"
+author: "Brad Harbans"
+date: "2/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(RCurl)
+library(reactable)
+```
+
+## Exercise 1
+
+Using the 173 majors listed in fivethirtyeight.com's College Majors dataset <https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/>, provide code that identifies the majors that contain either "DATA" or "STATISTICS"
+
+```{r exercise-1}
+x <- getURL('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv')
+collegeMajors <- read.csv(text = x)
+reactable( collegeMajors %>% filter( str_detect(collegeMajors$Major, pattern = "DATA|STATISTICS") ) )
+```
+
+## Exercise 2
+
+Write code that transforms the data below:
+
+[1] "bell pepper" "bilberry" "blackberry" "blood orange"
+
+[5] "blueberry" "cantaloupe" "chili pepper" "cloudberry"
+
+[9] "elderberry" "lime" "lychee" "mulberry"
+
+[13] "olive" "salal berry"
+
+Into a format like this:
+
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+
+```{r exercise-2}
+fruitsStringRaw <- "[1] \"bell pepper\"  \"bilberry\"     \"blackberry\"   \"blood orange\"
+
+[5] \"blueberry\"    \"cantaloupe\"   \"chili pepper\" \"cloudberry\"  
+
+[9] \"elderberry\"   \"lime\"         \"lychee\"       \"mulberry\"    
+
+[13] \"olive\"        \"salal berry\""
+
+fruitsStringRaw<- unlist(str_extract_all(fruitsStringRaw, pattern = "[a-z]+[:space:]?[a-z]*") )
+fruitsStringRaw
+```
+
+## Exercise 3
+
+Describe, in words, what these expressions will match:
+
+-   (.)\\1\\1 This expression will match any character, except a new line, followed by the same character twice more. N.B. We need to escape the backslash in order to evaluate the expression.
+
+```{r exercise-3a-a}
+testWords <- c( "aaa","aba","111","212" , "abcedfg")
+str_subset(testWords, pattern = "(.)\\1\\1" )
+```
+
+As written, the expression matches any character, excluding newlines, followed by the ASCII SOH character, represented by \\1, twice.
+
+```{r exercise-3a-b}
+testWords <- c( "aaa\1\1","aba\1\1","111","212" , "abcedfg")
+str_subset(testWords, pattern = "(.)\1\1" )
+```
+
+-   ""(.)(.)\\\\2\\\\1"" This expression will match a double quote, followed by any character followed by any other character, excluding newlines, followed by the second character, followed by the first character, followed by a double quote.\
+
+```{r exercise-3b}
+testWords <- c( "\"abba\"","aaba","1221","\"1221\"" , "abcedfg","123\"abba\"abc")
+str_subset(testWords, pattern = "\"(.)(.)\\2\\1\"")
+```
+
+-   (..)\\1 This expression will match any two characters, excluding newlines,followed by the same two characters. Assuming, that the epression should have been (..)\\1.
+
+```{r exercise-3c-a}
+testWords <- c( "abab","aaba","1212","abcabc" , "abcedfg", "adedeb")
+str_subset(testWords, pattern = "(..)\\1")
+```
+
+As written, the expression matches any two characters, excluding newlines, followed by the ASCII SOH character, represented by \\1.
+
+```{r exercise-3c-b}
+testWords <- c( "ab\1","aa\1ba","1212\1","abcabc" , "abcedfg", "adedeb")
+str_subset(testWords, pattern = "(..)\1")
+```
+
+-   "(.).\\\\1.\\\\1" This expression will match an expression that contains a double quotation mark followed by any character, excluding newlines, followed by any character, followed by the first character, followed by any character,excluding new lines, followed by the first character, followed by a double quotation mark .\
+
+```{r exercise-3d}
+testWords <- c( "\"abaca\"","\"12151\"","1212","abcabc" , "abcedfg", "adedeb")
+str_subset(testWords, pattern = "\"(.).\\1.\\1\"")
+```
+
+-   "(.)(.)(.).\*\\\\3\\\\2\\\\1" This expression will match any expression containing a double quotation mark, followed by any 3 characters (excluding new lines), followed by 0 more characters, followed by the 3rd characer, the 2nd character and the first character, followed by a double quotation mark.
+
+```{r exercise-3e}
+testWords <- c( "\"123abcdejdhfj321\"","\"123321\"", "\"abcanythingcba\"", "1212","abcabc" , "abcedfg", "adedeb")
+str_subset(testWords, pattern = "\"(.)(.)(.).*\\3\\2\\1\"")
+```
+
+## Exercise 4
+
+-   Start and end with the same character.
+
+\^(.).\*\\\\1$| \^( .)$
+
+```{r exercise-4a}
+testWords <- c( "aasdfjdskfjksdla","b1238219839129b", "asdfkasdjfkas", "abcdef1234","123451" , "dfkdsafi21","a")
+str_subset(testWords, pattern = "^(.).*\\1$|^(.)$")
+```
+
+-   Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.) ([:alpha:][:alpha:]).\*\\\\1
+
+```{r exercise-4b}
+testWords <- c( "church","aasbdfsdbfaashadbfhaa", "12abcdef12", "213456","123451" , "dfkdsafi21","a")
+str_subset(testWords, pattern = "([:alpha:][:alpha:]).*\\1")
+```
+
+-   Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.) ([:alpha:]).*\\1.*\\\\1
+
+```{r exercise-4c}
+testWords <- c( "eleven","seventeen", "123123123", "abcabcabc", "dfkdsafi21","a","eee","111")
+str_subset(testWords, pattern = "([:alpha:]).*\\1.*\\1")
+```
