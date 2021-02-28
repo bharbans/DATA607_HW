@@ -98,7 +98,7 @@ $$ E_A = \frac{1}{1+10^\frac{R_B - R_A }{400}} $$.
 
 I will use this calculation to determine the expected score for each game and obtain the sum for each player. As shown in the table below, ADITYA BAJAJ, has the highest score realtive to their expected result.
 <!--
-Ugly Code, replace with loop or figure out mapply, time permitting. Difficult if column size were much greater.
+Ugly Code, replace with loop or figure out mapply, time permitting. Difficult if there were more columns to analyze.
 -->
 
 ```{r extra-credit-expected-result}
