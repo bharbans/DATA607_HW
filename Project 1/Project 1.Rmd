@@ -26,7 +26,7 @@ crossTable <- read.fwf(crossTableFileLocation, widths = list( c(6,-1,33,-1,5,-1,
 
 #Reorder the Rows of the DataTable
 crossTable <- crossTable %>% select("PairNo", "Name","State",starts_with("TotalPts"),"PreRating","PostRating","USCFID", starts_with("R"))
-reactable(crossTable)
+reactable(crossTable, searchable = TRUE, highlight = TRUE, pagination = FALSE, height = 250)
 ```
 
 ## Parsing the Information in the Cross Table Data Frame.
@@ -38,7 +38,7 @@ Looking at the data we notice that we will need to obtain the performance rating
 Please see that the information that was stored in the second line of the round column contains no relevant information to the task at hand.
 
 ```{r verify-data-can-be-excluded}
-reactable( crossTable %>% select ("Name", matches("^R\\dL2$") ))
+reactable( crossTable %>% select ("Name", matches("^R\\dL2$") ), searchable = TRUE, highlight = TRUE, pagination = FALSE, height = 250)
 
 ```
 
@@ -64,7 +64,7 @@ I will now remove the provisional ratings from the pre-rating column, and cast t
 crossTable<-crossTable %>% mutate(  PreRating = str_extract(PreRating ,"[:digit:]+") )
 crossTable<-crossTable %>% mutate( PreRating =  as.integer(PreRating) )
 
-reactable(crossTable)
+reactable(crossTable, searchable = TRUE, highlight = TRUE, pagination = FALSE, height = 250)
 ```
 
 ## Calculate the Player’s Average Pre Chess Rating of Opponents
@@ -72,20 +72,20 @@ reactable(crossTable)
 We now have the data in state that we can more readily find the pre chess ratings of each player's opponents. I will first calculate the number of games each player played, and save that in a separate column, I will then sum up the scores of each opponent and then divide by the total number of games played. Games were not won, loss, or draw are represented by NA. 
 
 ```{r get-number-of-games-played}
-crossTable <- crossTable %>% mutate( numGames = rowSums(!is.na(select ( crossTable ,matches("^R\\dL1$") ))))
+crossTable <- crossTable %>% mutate(NumGames = rowSums(!is.na(select ( crossTable ,matches("^R\\dL1$") ))))
 
-crossTable$opponentSum <- apply(select ( crossTable ,matches("^R\\dL1$") ), 1, function(x){sum(crossTable$PreRating[match(x,crossTable$PairNo)] , na.rm = TRUE) } )
+crossTable$OpponentSum <- apply(select ( crossTable ,matches("^R\\dL1$") ), 1, function(x){sum(crossTable$PreRating[match(x,crossTable$PairNo)] , na.rm = TRUE) } )
 
-crossTable <- crossTable %>% mutate ( averageOpponentRating = round(opponentSum / numGames, digits = 0) )
+crossTable <- crossTable %>% mutate ( AverageOpponentRating = round(OpponentSum / NumGames, digits = 0) )
 
-reactable( select (crossTable, -matches("^R\\dL1$") , -"numGames", -"opponentSum" ) )
+reactable( select (crossTable, -matches("^R\\dL1$") , -"NumGames", -"OpponentSum" ), searchable = TRUE, highlight = TRUE, pagination = FALSE, height = 250)
  
 ```
 
 ## Export as CSV
 The following command will export the data frame above to a csv, I am using the relative path this will save in the working directory of my R environment. 
 ```{r export-csv}
-write.csv(select (crossTable, -matches("^R\\dL1$") , -"numGames", -"opponentSum" ), file = "tournamentinfo.csv", row.names = FALSE)
+write.table(select (crossTable, -matches("^R\\dL1$") , -"NumGames", -"OpponentSum", -"PairNo"), sep = ',', file = "tournamentinfo.csv", row.names = FALSE, col.names = c("Player’s Name", "Player’s State", "Total Number of Points", "Player’s Pre-Rating", "Average Pre Chess Rating of Opponents"))
 ```
 
 
@@ -125,5 +125,5 @@ crossTable$ExpectedPts<- round ( rowSums ( select(crossTable, matches("^R\\dEx")
 
 crossTable <- crossTable %>% mutate( ScoreDiff = TotalPts - ExpectedPts )
 
-reactable( select( crossTable, "Name" , "TotalPts" , "ExpectedPts", "ScoreDiff")[order(crossTable$ScoreDiff, decreasing = TRUE),])
+reactable( select( crossTable, "Name" , "TotalPts" , "ExpectedPts", "ScoreDiff")[order(crossTable$ScoreDiff, decreasing = TRUE),], searchable = TRUE, highlight = TRUE, pagination = FALSE, height = 250)
 ```
