@@ -1,0 +1,95 @@
+---
+title: "Project 1"
+author: "Brad Harbans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(reactable)
+```
+
+## Introduction
+
+In this project we will be looking at a sample chess cross table file. I have uploaded this file to github and this can be viewed from the following link, [Sample Chess Cross Table](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%201/tournamentinfo.txt). I will begin by obtaining the file and importing it into R. For the import I will be using the read.fwf function to import the fixed width file. For the assignment we were asked to parse the file into a format that contains the Player's Name, Player's State, Total Number of Points, Player's Pre-Rating, and Average Pre Chess Rating of Opponents. N.B. The first four lines have been skipped as they contain header data. Also using the fixed with file import allows for a lot of cleanup on import.
+
+```{r loadfile}
+crossTableFileLocation <-('https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%201/tournamentinfo.txt')
+
+colNames <- c("PairNo","Name", "TotalPts","R1L1","R2L1","R3L1","R4L1","R5L1","R6L1","R7L1","State","USCFID", "PreRating","PostRating","TotalPtsL2","R1L2","R2L2","R3L2","R4L2","R5L2","R6L2","R7L2" )
+
+colClasses <- c("factor", "character", "numeric", "character", "character", "character", "character", "character", "character", "character", "factor", "integer", "character","character", "character", "character", "character", "character", "character", "character", "character", "character"  )
+
+crossTable <- read.fwf(crossTableFileLocation, widths = list( c(6,-1,33,-1,5,-1,5,-1,5,-1,5,-1,5,-1,5,-1,5,-1,5,-1), c(6,-1,10,-4, 8,-2,9,-1,5,-1,5,-1,5,-1,5,-1,5,-1,5,-1,5,-1,5,-1),c(-89))  , skip =4, strip.white=TRUE, col.names = colNames, colClasses= colClasses )
+
+#Reorder the Rows of the DataTable
+crossTable <- crossTable %>% select("PairNo", "Name","State",starts_with("TotalPts"),"PreRating","PostRating","USCFID", starts_with("R"))
+reactable(crossTable)
+```
+
+## Parsing the Information in the Cross Table Data Frame.
+
+### Remove Unnecessary Columns
+
+Looking at the data we notice that we will need to obtain the performance ratings from the general ratings column, that the data in the second line of the round's columns is irrelevant to the assignment and that whether the player won, lost or drew is also irrelevant to calculating the average pre-chess rating. This allows us to eliminate some columns and simplify the data in some of the columns.
+
+Please see that the information that was stored in the second line of the round column contains no relevant information to the task at hand.
+
+```{r verify-data-can-be-excluded}
+reactable( crossTable %>% select ("Name", matches("^R\\dL2$") ))
+
+```
+
+I will now exclude the columns containing data that we do not need, this could also have been done by ignoring these values in the widths list, i.e. settings the width to a negative number. 
+
+```{r subset-without-Rnl2}
+crossTable <- crossTable %>% select (everything(), -matches("^R\\dL2$") , -"TotalPtsL2", -"PostRating" , -"USCFID")
+```
+
+
+### Remove Outcome from Round Columns and Cast Rounds Column as Factor 
+
+I will now remove the outcomes from the rounds tables and cast the resulting columns as a factor. 
+
+```{r remove-outcomes}
+crossTable<-crossTable %>% mutate_at( vars( matches("^R\\dL1$")) ,~str_extract( . ,"[:digit:]+") )
+crossTable<-crossTable %>% mutate_at( vars( matches("^R\\dL1$")) , ~as.factor(.) )
+```
+
+### Remove Provisional Rating from the Pre-Rating Column.
+I will now remove the provisional ratings from the pre-rating column, and cast the column as an integer. N.B The string_extract function return the first instance in which the pattern is found.
+```{r cleanup-pre-rating}
+crossTable<-crossTable %>% mutate(  PreRating = str_extract(PreRating ,"[:digit:]+") )
+crossTable<-crossTable %>% mutate( PreRating =  as.integer(PreRating) )
+
+reactable(crossTable)
+```
+
+## Calculate the Player’s Average Pre Chess Rating of Opponents
+
+We now have the data in state that we can more readily find the pre chess ratings of each player's opponents. I will first calculate the number of games each player played, and save that in a separate column, I will then sum up the scores of each opponent and then divide by the total number of games played. Games were not won, loss, or draw are represented by NA. 
+
+```{r get-number-of-games-played}
+crossTable <- crossTable %>% mutate( numGames = rowSums(!is.na(select ( crossTable ,matches("^R\\dL1$") ))))
+
+crossTable$opponentSum <- apply(select ( crossTable ,matches("^R\\dL1$") ), 1, function(x){sum(crossTable$PreRating[match(x,crossTable$PairNo)] , na.rm = TRUE) } )
+
+crossTable <- crossTable %>% mutate ( averageOpponentRating = round(opponentSum / numGames, digits = 0) )
+
+reactable( select (crossTable, -matches("^R\\dL1$") , -"numGames", -"opponentSum" ) )
+ 
+```
+
+## Export as CSV
+The following command will export the data frame above to a csv, I am using the relative path this will save in the working directory of my R environment. 
+```{r export-csv}
+write.csv(select (crossTable, -matches("^R\\dL1$") , -"numGames", -"opponentSum" ), file = "tournamentinfo.csv", row.names = FALSE)
+```
+<!--
+
+## Extra Credit
+Using the provided ELO calculation, determine each player’s expected result (number of points), based on his or her pre-tournament rating, and the average pre-tournament rating for all of the player’s opponents. Which player scored the most points relative to his or her expected result? 
+-->
+
