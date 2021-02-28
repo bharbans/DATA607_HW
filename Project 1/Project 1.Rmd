@@ -121,9 +121,9 @@ crossTable$R6Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[m
 
 crossTable$R7Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R7L1, crossTable$PreRating ) 
 
-crossTable$expectedScore<- round ( rowSums ( select(crossTable, matches("^R\\dEx")) , na.rm = TRUE) , digits = 2)
+crossTable$ExpectedPts<- round ( rowSums ( select(crossTable, matches("^R\\dEx")) , na.rm = TRUE) , digits = 2)
 
-crossTable <- crossTable %>% mutate( scoreDiff = TotalPts - expectedScore )
+crossTable <- crossTable %>% mutate( ScoreDiff = TotalPts - ExpectedPts )
 
-reactable( select( crossTable, "Name" , "TotalPts" , "expectedScore", "scoreDiff")[order(crossTable$scoreDiff, decreasing = TRUE),])
+reactable( select( crossTable, "Name" , "TotalPts" , "ExpectedPts", "ScoreDiff")[order(crossTable$ScoreDiff, decreasing = TRUE),])
 ```
