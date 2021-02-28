@@ -87,9 +87,41 @@ The following command will export the data frame above to a csv, I am using the 
 ```{r export-csv}
 write.csv(select (crossTable, -matches("^R\\dL1$") , -"numGames", -"opponentSum" ), file = "tournamentinfo.csv", row.names = FALSE)
 ```
-<!--
+
 
 ## Extra Credit
-Using the provided ELO calculation, determine each player’s expected result (number of points), based on his or her pre-tournament rating, and the average pre-tournament rating for all of the player’s opponents. Which player scored the most points relative to his or her expected result? 
--->
+Using the provided ELO calculation, determine each player’s expected result (number of points), based on his or her pre-tournament rating, and the average pre-tournament rating for all of the player’s opponents. Which player scored the most points relative to his or her expected result?  
 
+I am somewhat unsure of how to approach this using the average opponent rating. However, I found a website that provides the following calculation for determining the expected score of a player based on their ELO rankings, [The Mathematics of Elo Ratings](https://medium.com/cantors-paradise/the-mathematics-of-elo-ratings-b6bfc9ca1dba#:~:text=The%20expected%20performance%20of%20a,and%200%25%20chance%20of%20drawing.).
+
+$$ E_A = \frac{1}{1+10^\frac{R_B - R_A }{400}} $$. 
+
+I will use this calculation to determine the expected score for each game and obtain the sum for each player. As shown in the table below, ADITYA BAJAJ, has the highest score realtive to their expected result.
+
+
+```{r extra-credit-expected-result}
+expectedScore <- function (R_A , R_B )
+{
+  1/ (1+ 10^((R_B - R_A)/400) )
+}
+
+crossTable$R1Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R1L1, crossTable$PreRating ) 
+
+crossTable$R2Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R2L1, crossTable$PreRating ) 
+
+crossTable$R3Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R3L1, crossTable$PreRating ) 
+
+crossTable$R4Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R4L1, crossTable$PreRating ) 
+
+crossTable$R5Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R5L1, crossTable$PreRating ) 
+
+crossTable$R6Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R6L1, crossTable$PreRating ) 
+
+crossTable$R7Ex <- mapply(function (x,y) {expectedScore(y,crossTable$PreRating[match(x,crossTable$PairNo)]) },  crossTable$R7L1, crossTable$PreRating ) 
+
+crossTable$expectedScore<- rowSums ( select(crossTable, matches("^R\\dEx")) , na.rm = TRUE)
+
+crossTable <- crossTable %>% mutate( scoreDiff = TotalPts - expectedScore )
+
+reactable( select( crossTable, "Name" , "TotalPts" , "expectedScore", "scoreDiff")[order(crossTable$scoreDiff, decreasing = TRUE),])
+```
