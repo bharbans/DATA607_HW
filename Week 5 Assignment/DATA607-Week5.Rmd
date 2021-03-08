@@ -1,0 +1,97 @@
+---
+title: "DATA607-Week5"
+author: "Brad Harbans"
+date: "3/7/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(reactable)
+library(grid)
+library(gridExtra)
+```
+
+## Introduction
+
+We have been asked to import data that has been provided in the image below. I have created a CSV file with the data and posted it to [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%205%20Assignment/week5_assignment.csv).
+
+![](https://raw.githubusercontent.com/bharbans/DATA607_HW/c197488cf8aeae85f649cf93edef4562d80b75ef/Week%205%20Assignment/data_image.png)
+
+## Import Data into R from the CSV
+
+I will begin by importing the CSV from GitHub. 
+
+```{r import-csv, message=FALSE}
+file <- ("https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%205%20Assignment/week5_assignment.csv")
+airlineData <- read_csv(file)
+```
+Please find the data displayed below.
+
+```{r display-raw-csv}
+reactable(airlineData)
+```
+## Tidy Data
+
+In the tidy data format, each observation should be in its own row and each variable in its own column. I will now convert the data from wide format to long by introducing a new variable, `City`. I will also use the spread function to add the status as two separate columns. 
+
+```{r tidy-data}
+airlineDataTidy <- airlineData %>% 
+  rename(Airline = AIRLINE)
+
+airlineDataTidy <- airlineDataTidy %>% 
+  gather( key = "City",value = "NumberOfFlights", 3:7, factor_key = TRUE)
+
+airlineDataTidy <- airlineDataTidy %>% 
+  spread(key = Status,value = NumberOfFlights)
+
+airlineDataTidy <- airlineDataTidy %>% 
+  mutate(totalNumberofFlights = delayed + `on time` , PropOnTime = `on time`/totalNumberofFlights)
+reactable(airlineDataTidy)
+
+```
+
+
+## Data Analysis
+
+Below I will compare the per-city on-time performance for both airlines. 
+
+```{r city-on-time-performance}
+airlineDataTidy %>% 
+  select(City, Airline, PropOnTime) %>% 
+  arrange(desc(PropOnTime), City ) %>% 
+  reactable()
+```
+
+Displayed graphically:
+```{r city-on-time-performance-graph}
+plot1 <-airlineDataTidy %>% 
+  ggplot(aes(x=City,y=`on time`,color=Airline)) + geom_point() + ggtitle("City vs Number of On-Time Flights (Fig1)")
+plot2 <- airlineDataTidy %>% 
+  ggplot(aes(x=City,y=PropOnTime,color=Airline)) + geom_point() + ggtitle("City vs Proportion of Flights On Time (Fig 2)")
+
+grid.newpage()
+grid.arrange(plot1,plot2, nrow= 2)
+```
+
+Below I will compare the overall on-time performance for both airlines. The data shows that Alaska Airlines on average has less on time flights than AM West. 
+
+```{r airline-on-time-performance}
+airlineDataTidy %>% 
+  group_by(Airline) %>% 
+  summarise( "Number On Time"=sum(`on time`),ProportionOnTime = sum(`on time`)/sum(`on time`,delayed) ) %>% 
+  arrange(desc(ProportionOnTime)) %>% 
+  reactable()
+```
+
+## Conclusion
+It appears that even though Alaska Airlines has a higher proportion of flights on time for every city,  AM West has the higher proportion of on-time flights. Why is this the case? AM West has the majority of its flights departing from Phoenix which has the highest number of on-time flights. This skews the overall number of flights in favor of AM West when looking at the data as a whole. 
+
+```{r conclusion-table}
+airlineDataTidy %>% 
+  group_by(City, Airline) %>% 
+  summarise( propOnTimeByCity = `on time`/totalNumberofFlights, totalNumberofFlights, .groups = "keep") %>% 
+  arrange(desc(propOnTimeByCity) ) %>% 
+  reactable()
+```
