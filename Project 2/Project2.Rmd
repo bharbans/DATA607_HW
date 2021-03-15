@@ -170,7 +170,7 @@ ggplot(voterEnrollmentByCountySubset, aes( x = Party , y = Total_Prop )) +
 ````
 
 ### Conclusion
-It is interesting to note that even though New York leans towards the Democratic party, which I have not shown but can easily be shown from the data, in most elections the total proportion for most counties are less than .5. This would indicate that areas, probably in the New York City, which is much more populated skews the overall affiliation of the state. These are likely represented by the outliers in the Democrat boxplot.
+It is interesting to note that even though New York leans towards the Democratic party, which I have not shown but can easily be shown from the data, in most elections the total proportion for most counties are less than .5. This would indicate that counties, probably in the New York City, which is much more populated skews the overall affiliation of the state. These are likely represented by the outliers in the Democrat boxplot.
 
 ## Works Cited
 Enrollment by county. (2021, February 2). Retrieved March 15, 2021, from https://www.elections.ny.gov/EnrollmentCounty.html 
