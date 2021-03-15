@@ -1,0 +1,183 @@
+---
+title: "Project 2"
+author: "Brad Harbans"
+date: "3/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(DT)
+library(tidyverse)
+```
+
+## Introduction
+
+In this project we have been asked to find three untidy data sets, we will then need to tidy these data sets and perform some analysis on them. These data sets should be available as CSV files, preferably in a wide data format. 
+
+## College retention rates data set.
+
+For the first dataset I have chosen the retention rates from <https://www.tuitiontracker.org/>. This dataset contains the part time and full time retention rates from 2008-2016 for several US Higher Educational Institutions. For the purposes of this assignment, I have removed the columns corresponding to years prior to 2013, and renamed some columns to make it easier to parse. I have uploaded the resulting CSV file to [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/retention-rates.csv).
+
+```{r dataset-1-import, message=FALSE}
+retentionRates <- read_csv('https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/retention-rates.csv')
+```
+
+Please see the data below:
+
+```{r dataset-1-display}
+datatable(head(retentionRates))
+```
+### Tidy Data
+I will now use the `pivot_longer`,`separate`, and `pivot_wider` functions to put the data in a tidy format. Additionally, for the purposes of this assignment I will only consider schools in New York State, I will use the `filter` function to only show these. I will also discard columns that are not needed. 
+```{r dataset-1-tidy}
+retentionRatesNY <- 
+  retentionRates %>% 
+  pivot_longer(contains("retention")) %>%
+  separate(name, into = c("Student_Status","year"),sep = "~") %>% 
+  pivot_wider(names_from = Student_Status)  %>% 
+  filter(`State abbreviation` == "NY" ) %>% 
+  select( -UnitID, -starts_with("Street address") )
+
+datatable(retentionRatesNY)
+```
+### Analyze Data
+
+I will first plot the distribution of full time retention rates for New York state, the distribution is left skewed bounded by 100 on the top. It appears to be almost normally distributed. 
+```{r dataset-1-analysis-histogram }
+retentionRatesNY2016 <- retentionRatesNY %>% 
+  filter(year == 2016)
+ggplot(retentionRatesNY2016 , aes(x=`Full-time retention rate`)) + geom_histogram(binwidth = 10, na.rm = T) + geom_vline(xintercept =  mean(retentionRatesNY2016$`Full-time retention rate`,na.rm = T) , col = "red", size = 1.5)
+```
+
+I will now consider all CUNY Schools by filtering the data set further. 
+```{r dataset-1-CUNY }
+retentionRatesNY2016CUNY <- retentionRatesNY2016 %>% 
+  filter(grepl('*CUNY*',`Institution Name`))
+datatable( retentionRatesNY2016CUNY)
+```
+From this I will now use the `mutate` function on the data to see how far each CUNY School deviates from the mean score for NY State.
+```{r dataset-1-CUNY-zscore}
+sd.nySchools <- sd(retentionRatesNY2016$`Full-time retention rate`,na.rm = T)
+mean.nySchools <- mean(retentionRatesNY2016$`Full-time retention rate`, na.rm = T)
+retentionRatesNY2016CUNY <- retentionRatesNY2016CUNY %>% 
+  mutate( Z.ScoreFullTime = round( ( (`Full-time retention rate` - mean.nySchools )/sd.nySchools)  ,2 ) )  %>% 
+  select(`Institution Name`, `Z.ScoreFullTime`) %>% 
+  arrange(desc(Z.ScoreFullTime ))
+
+datatable(retentionRatesNY2016CUNY)
+```
+
+### Conclusion
+The colleges at the top of the list have the highest retention in comparison to their counterparts at the bottom, when considering all schools in New York State. It appears that community colleges have lower retention rates than the senior colleges. 
+
+## GDP by Country by Year
+For my second data set I will examine the GDP by Country by year, this was posted by my classmate, Matthew Lucich, he obtained the data from the [World Bank](https://data.worldbank.org/indicator/NY.GDP.MKTP.KD.ZG?most_recent_year_desc=true). I have copied the data from his google drive and have copied it to [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/GDP-Percent-Growth-by-Country-by-Year.csv).
+
+```{r dataset-2-import, message=FALSE}
+gdpByCountryByYear <- read_csv('https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/GDP-Percent-Growth-by-Country-by-Year.csv')
+```
+
+Please see the data below:
+
+```{r dataset-2-display}
+datatable(head(gdpByCountryByYear))
+```
+### Tidy Data
+I will now use the `pivot_longer` function to put the data in a tidy format. Additionally, for the purposes of this assignment I will only consider schools in New York State, I will use the `filter` function to only show these. 
+
+```{r dataset-2-tidy}
+
+gdpByCountryByYear <- 
+  gdpByCountryByYear %>% 
+  pivot_longer('1960':'2019',names_to = "year", values_to = "GDP Growth Percent") %>% 
+  select ( -starts_with('Indicator'))
+datatable(head(gdpByCountryByYear, n= 100L) ) 
+```
+### Analyze Data
+Now that the data is in a tidy format I will perform some analysis on it. I will begin by looking at some summary statistics for the data, I will use the `group_by` function to group by country, and the `summarise` function to obtain the statistics of interest. I will also use the `arrange` function to have the countries with the highest average growth rate rise to the top of the new data frame.
+```{r dataset-2-analysis}
+summaryStatsGDPbyCounty <- gdpByCountryByYear %>% 
+  group_by(`Country Name`) %>% 
+  summarise(mean = round(mean(`GDP Growth Percent`,na.rm=T),2), sd = round(sd(`GDP Growth Percent`,na.rm=T),2) , sum = round(sum(`GDP Growth Percent`,na.rm=T),2)) %>% 
+  arrange(desc(mean))
+
+datatable(summaryStatsGDPbyCounty)
+```
+```{r dataset-2-plot}
+
+```
+### Conclusion
+From the data it would appear that Equatorial Guinea has had the highest increase in GDP from 1960-2019. 
+
+## NYS Voter Enrollment by County
+For my third data set I will be looking at the New York State voter registration enrollment by county as of February 2021. This data is available from [New York State Board of Elections Website](https://www.elections.ny.gov/EnrollmentCounty.html). I removed the first few rows that had a title and information about the data. I could have alternatively removed the data by ignoring the first four lines in the import. I exported the excel file as a CSV and uploaded it to [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/county_Feb21.csv). N.B. I used the `na.omit` to remove empty rows from the data set. 
+
+```{r dataset-3-import, message=FALSE}
+voterEnrollmentByCounty <- read_csv('https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/county_Feb21.csv' ) %>% na.omit()
+```
+
+Please see the data below:
+
+```{r dataset-3-display}
+
+datatable(voterEnrollmentByCounty)
+```
+
+### Tidy Data
+I will now use the `pivot_longer` and `pivot_wider` function to put the data in a tidy format. 
+
+```{r dataset-3-tidy}
+
+voterEnrollmentByCounty <-
+  voterEnrollmentByCounty %>% 
+  pivot_longer('DEM':'BLANK',names_to = "Party", values_to = "Number of Voters") %>% 
+  pivot_wider(-TOTAL,names_from = STATUS, values_from = 'Number of Voters')
+
+datatable(voterEnrollmentByCounty ) 
+```
+
+### Transform and Analyze Data
+
+Now that the data is in tidy format I can transform the data. I will create two new columns using the `mutate` function to see the proportion of each party that is present in a county. As part of my tidying process I lost the total number of voters by county, I will re-introduce this column by performing using the `inner_join` of a new data table which calculates this value with the tidied data. 
+
+```{r dataset-3-transform-restore-totalvoters}
+totalVotersByCounty <-voterEnrollmentByCounty %>% 
+  group_by(COUNTY) %>% 
+  summarise(Total_Voters = sum(Active+Inactive))
+voterEnrollmentByCounty <- inner_join( voterEnrollmentByCounty, totalVotersByCounty , by = "COUNTY") 
+```
+
+I will now use the `mutate` function to calculate new columns that contains proportions.
+```{r dataset-3-transform-calculate-proportions}
+voterEnrollmentByCounty <- voterEnrollmentByCounty %>% 
+  mutate( Active_Prop = round(Active/Total_Voters,2) , Inactive_Prop = round(Inactive/Total_Voters,2) , Total_Prop = round(Total/Total_Voters,2) )
+```
+
+I will now subset the data so that I am only looking at the Total Proportion of voters per county, using the `select` function.
+```{r dataset-3-subset}
+voterEnrollmentByCountySubset <-
+  voterEnrollmentByCounty %>% 
+  select( REGION, COUNTY, Party, Total_Prop )
+
+datatable(voterEnrollmentByCountySubset)
+```
+I will now plot this information using a boxplot. 
+```{r dataset-3-boxplot}
+ggplot(voterEnrollmentByCountySubset, aes( x = Party , y = Total_Prop )) +
+  geom_boxplot(outlier.size=2,outlier.colour="red") 
+
+````
+
+### Conclusion
+It is interesting to note that even though New York leans towards the Democratic party, which I have not shown but can easily be shown from the data, in most elections the total proportion for most counties are less than .5. This would indicate that areas, probably in the New York City, which is much more populated skews the overall affiliation of the state. These are likely represented by the outliers in the Democrat boxplot.
+
+## Works Cited
+Enrollment by county. (2021, February 2). Retrieved March 15, 2021, from https://www.elections.ny.gov/EnrollmentCounty.html 
+
+GDP growth (annual %). (n.d.). Retrieved March 15, 2021, from https://data.worldbank.org/indicator/NY.GDP.MKTP.KD.ZG?most_recent_year_desc=true 
+
+Hancock, J., &amp; D'Amato, P. (2018, April 30). Tuition tracker. Retrieved March 15, 2021, from https://www.tuitiontracker.org/ 
+
+
+
