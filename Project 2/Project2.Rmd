@@ -108,7 +108,7 @@ datatable(summaryStatsGDPbyCounty)
 
 ```
 ### Conclusion
-From the data it would appear that Equatorial Guinea has had the highest increase in GDP from 1960-2019. 
+From the data it would appear that Equatorial Guinea has had the highest average increase in GDP from 1960-2019, this may be in part to it's oil production. It would merit a closer look to see when this occured and why, it has a rather large standard deviation compared to other countries which indicates greater variability in the grown rate. 
 
 ## NYS Voter Enrollment by County
 For my third data set I will be looking at the New York State voter registration enrollment by county as of February 2021. This data is available from [New York State Board of Elections Website](https://www.elections.ny.gov/EnrollmentCounty.html). I removed the first few rows that had a title and information about the data. I could have alternatively removed the data by ignoring the first four lines in the import. I exported the excel file as a CSV and uploaded it to [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/county_Feb21.csv). N.B. I used the `na.omit` to remove empty rows from the data set. 
