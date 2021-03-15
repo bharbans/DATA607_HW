@@ -29,47 +29,47 @@ Please see the data below:
 datatable(head(retentionRates))
 ```
 ### Tidy Data
-I will now use the `pivot_longer`,`separate`, and `pivot_wider` functions to put the data in a tidy format. Additionally, for the purposes of this assignment I will only consider schools in New York State, I will use the `filter` function to only show these. I will also discard columns that are not needed. 
+I will now use the `pivot_longer`,`separate`, and `pivot_wider` functions to put the data in a tidy format. Additionally, I will also discard columns that are not needed. 
 ```{r dataset-1-tidy}
-retentionRatesNY <- 
+retentionRates <- 
   retentionRates %>% 
   pivot_longer(contains("retention")) %>%
   separate(name, into = c("Student_Status","year"),sep = "~") %>% 
   pivot_wider(names_from = Student_Status)  %>% 
-  filter(`State abbreviation` == "NY" ) %>% 
   select( -UnitID, -starts_with("Street address") )
 
-datatable(retentionRatesNY)
+datatable(head(retentionRates,100))
 ```
 ### Analyze Data
 
-I will first plot the distribution of full time retention rates for New York state, the distribution is left skewed bounded by 100 on the top. It appears to be almost normally distributed. 
+I will first plot the distribution of full time retention rates, the distribution is left skewed bounded by 100 on the top. It appears to be almost normally distributed. 
 ```{r dataset-1-analysis-histogram }
-retentionRatesNY2016 <- retentionRatesNY %>% 
+retentionRates2016 <- retentionRates %>% 
   filter(year == 2016)
-ggplot(retentionRatesNY2016 , aes(x=`Full-time retention rate`)) + geom_histogram(binwidth = 10, na.rm = T) + geom_vline(xintercept =  mean(retentionRatesNY2016$`Full-time retention rate`,na.rm = T) , col = "red", size = 1.5)
+ggplot(retentionRates2016 , aes(x=`Full-time retention rate`)) + geom_histogram(binwidth = 10, na.rm = T) + geom_vline(xintercept =  mean(retentionRates2016$`Full-time retention rate`,na.rm = T) , col = "red", size = 1.5)
 ```
 
 I will now consider all CUNY Schools by filtering the data set further. 
 ```{r dataset-1-CUNY }
-retentionRatesNY2016CUNY <- retentionRatesNY2016 %>% 
+retentionRates2016CUNY <- retentionRates2016 %>% 
   filter(grepl('*CUNY*',`Institution Name`))
-datatable( retentionRatesNY2016CUNY)
+datatable( retentionRates2016CUNY)
 ```
-From this I will now use the `mutate` function on the data to see how far each CUNY School deviates from the mean score for NY State.
+From this I will now use the `mutate` function on the data to see how far each CUNY School deviates from the mean score for all colleges in 2016. 
 ```{r dataset-1-CUNY-zscore}
-sd.nySchools <- sd(retentionRatesNY2016$`Full-time retention rate`,na.rm = T)
-mean.nySchools <- mean(retentionRatesNY2016$`Full-time retention rate`, na.rm = T)
-retentionRatesNY2016CUNY <- retentionRatesNY2016CUNY %>% 
-  mutate( Z.ScoreFullTime = round( ( (`Full-time retention rate` - mean.nySchools )/sd.nySchools)  ,2 ) )  %>% 
-  select(`Institution Name`, `Z.ScoreFullTime`) %>% 
+sd.schools <- sd(retentionRates2016$`Full-time retention rate`,na.rm = T)
+mean.schools <- mean(retentionRates2016$`Full-time retention rate`, na.rm = T)
+
+retentionRates2016CUNY <- retentionRates2016CUNY %>% 
+  mutate( Z.ScoreFullTime = round( ( (`Full-time retention rate` - mean.schools )/sd.schools)  ,2 ) , ApproxPercentile = round(pnorm(Z.ScoreFullTime),2 ) )  %>% 
+  select(`Institution Name`, `Z.ScoreFullTime`,ApproxPercentile ) %>% 
   arrange(desc(Z.ScoreFullTime ))
 
-datatable(retentionRatesNY2016CUNY)
+datatable(retentionRates2016CUNY)
 ```
 
 ### Conclusion
-The colleges at the top of the list have the highest retention in comparison to their counterparts at the bottom, when considering all schools in New York State. It appears that community colleges have lower retention rates than the senior colleges. 
+The colleges at the top of the list have the highest retention in comparison to their counterparts at the bottom, when considering all schools in the country. It appears that community colleges have lower retention rates than the senior colleges. 
 
 ## GDP by Country by Year
 For my second data set I will examine the GDP by Country by year, this was posted by my classmate, Matthew Lucich, he obtained the data from the [World Bank](https://data.worldbank.org/indicator/NY.GDP.MKTP.KD.ZG?most_recent_year_desc=true). I have copied the data from his google drive and have copied it to [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Project%202/GDP-Percent-Growth-by-Country-by-Year.csv).
