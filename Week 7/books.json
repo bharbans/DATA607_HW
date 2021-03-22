@@ -4,7 +4,7 @@
 		"Author1": "Neil DeGrasse Tyson",
     	"Author2": "James Trefil",
     	"Genre": "Philosophy Metaphysics",
-    	"ISBN-10": "1426221770",
+    	"ISBN10": "1426221770",
     	"Language": "English",
     	"Publisher": "National Geographic"
    },
@@ -13,7 +13,7 @@
     	"Author1": "Bill Gates",
         "Author2": "",
     	"Genre": "Environmental Policy",
-    	"ISBN-10": "385546130",
+    	"ISBN10": "385546130",
     	"Language": "English",
     	"Publisher": "Knopf"
 	},
@@ -22,7 +22,7 @@
     	"Author1": "Walter Isaacson",
         "Author2": "",
     	"Genre": "Scientist Biographies",
-    	"ISBN-10": "1982115858",
+    	"ISBN10": "1982115858",
     	"Language": "English",
     	"Publisher": "Simon and Schuster"
 	}
