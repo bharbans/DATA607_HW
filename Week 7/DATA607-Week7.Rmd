@@ -13,7 +13,7 @@ library(XML)
 library(DT)
 library(methods)
 library(rvest)
-library(rjson)
+library(jsonlite)
 ```
 
 ## Introduction
@@ -44,8 +44,9 @@ xml.raw <- xmlParse(getURL(xml.url))
 
 I will now use the `xmlToDataFrame` to convert my file to an R DataFrame. 
 ```{r xml.root}
-books.df.fromXML <- xmlToDataFrame(xml.raw)
-datatable(books.df.fromXML)
+books.df.fromXML <- xmlToDataFrame(xml.raw)%>% 
+  mutate(ISBN10  = as.integer(ISBN10) )
+datatable(books.df.fromXML) 
 ```
 
 
@@ -60,13 +61,26 @@ I will now use the `html_table` function from the `rvest` library to import the 
 ```{r html.table.to.dataframe}
 allTablesFromHTML<- html.raw %>%  html_table(fill = T,header = T, trim = T)
 books.df.fromHTML <- allTablesFromHTML[[1]] %>% 
-  mutate_all(list(~na_if(.,"")))
+  mutate_all(list(~na_if(.,""))) 
 ```
 
 ## Read JSON Format
-I have copied the JSON form of the data into [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.json).  In my file I stored the information about the three books in a JSON array.
+I have copied the JSON form of the data into [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.json).  In my file I stored the information about the three books in a JSON array. I will use the `fromJSON` function from the `jsonlite` package to parse the file. I have also used the `mutate_all` function to replace all empty spaces with NA.
 ```{r json.import}
 json.url<- "https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.json"
-json.raw <- fromJSON(getURL(json.url))
+json.raw <- jsonlite::fromJSON(getURL(json.url))
+books.df.fromJSON <- json.raw$books %>% 
+  mutate_all(list(~na_if(.,""))) %>% 
+  mutate( ISBN10  = as.integer(ISBN10) )
 ```
 
+## Conclusion and Extra Credit
+
+There are many different ways to obtain data in R, in this assignment we are concerned with JSON, XML files and HTML Tables.  I will use the `all_equals` function to show that the three data frames are in fact equal, bear in mind I did introduce NAs for the JSON and HTML formats where the information was empty. I also cast the ISBN10 column as integers for the XML and JSON formats, the HTML parser did this on its own.
+
+```{r conclusion}
+
+all_equal(books.df.fromHTML,books.df.fromJSON)
+all_equal(books.df.fromHTML,books.df.fromXML)
+
+```
