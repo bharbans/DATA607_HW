@@ -1,27 +1,27 @@
 {"books":[
 	{
 		"Title": "Cosmic Queries: StarTalk's Guide to Who We Are, How We Got Here, and Where We're Going"
-    	"Author1":"Neil DeGrasse Tyson"
-    	"Author2":"James Trefil"
-    	"Genre":"Philosophy Metaphysics"
-    	"ISBN-10":"1426221770"
-    	"Language":"English"
-    	"Publisher":"National Geographic"
+		"Author1": "Neil DeGrasse Tyson"
+    	"Author2": "James Trefil"
+    	"Genre": "Philosophy Metaphysics"
+    	"ISBN-10": "1426221770"
+    	"Language": "English"
+    	"Publisher": "National Geographic"
    },
    {
-    	"Title":"How to Avoid a Climate Disaster: The Solutions We Have and the Breakthroughs We Need"
-    	"Author1":"Bill Gates"
-    	"Genre":"Environmental Policy"
-    	"ISBN-10":"385546130"
-    	"Language":"English"
-    	"Publisher":"Knopf"
+    	"Title": "How to Avoid a Climate Disaster: The Solutions We Have and the Breakthroughs We Need"
+    	"Author1": "Bill Gates"
+    	"Genre": "Environmental Policy"
+    	"ISBN-10": "385546130"
+    	"Language": "English"
+    	"Publisher": "Knopf"
 	},
 	{
-    	"Title":"The Code Breaker: Jennifer Doudna, Gene Editing, and the Future of the Human Race"
-    	"Author1":"Walter Isaacson"
-    	"Genre":"Scientist Biographies"
-    	"ISBN-10":"1982115858"
-    	"Language":"English"
-    	"Publisher":"Simon & Schuster"
+    	"Title": "The Code Breaker: Jennifer Doudna, Gene Editing, and the Future of the Human Race"
+    	"Author1": "Walter Isaacson"
+    	"Genre": "Scientist Biographies"
+    	"ISBN-10": "1982115858"
+    	"Language": "English"
+    	"Publisher": "Simon & Schuster"
 	}
 ]}
