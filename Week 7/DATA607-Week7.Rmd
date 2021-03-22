@@ -1,0 +1,72 @@
+---
+title: "DATA607-Week7"
+author: "Brad Harbans"
+date: "3/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(RCurl)
+library(XML)
+library(DT)
+library(methods)
+library(rvest)
+library(rjson)
+```
+
+## Introduction
+
+For this assignment we have been asked to store information about three books, at least one of which has more than one author , into an XML file, an HTML table and a JSON file. For this assignment I have chosen the following three books.
+
++--------------------------------------------------------------------------------------+---------------------+--------------+------------------------+------------+----------+----------------------+
+| Title                                                                                | Author1             | Author2      | Genre                  | ISBN-10    | Language | Publisher            |
++--------------------------------------------------------------------------------------+---------------------+--------------+------------------------+------------+----------+----------------------+
+| Cosmic Queries: StarTalk's Guide to Who                                              | Neil DeGrasse Tyson | James Trefil | Philosophy Metaphysics | 1426221770 | English  | National Geographic  |
+| We Are, How We Got Here, and Where We're Going                                       |                     |              |                        |            |          |                      |
++--------------------------------------------------------------------------------------+---------------------+--------------+------------------------+------------+----------+----------------------+
+| How to Avoid a Climate Disaster: The Solutions We Have and the Breakthroughs We Need | Bill Gates          |              | Environmental Policy   | 385546130  | English  | Knopf                |
++--------------------------------------------------------------------------------------+---------------------+--------------+------------------------+------------+----------+----------------------+
+| The Code Breaker: Jennifer Doudna, Gene Editing, and the Future of the Human Race    | Walter Isaacson     |              | Scientist Biographies  | 1982115858 | English  | Simon and Schuster     |
++--------------------------------------------------------------------------------------+---------------------+--------------+------------------------+------------+----------+----------------------+
+
+
+## Read XML Format
+
+I have copied the XML form of the data into [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.xml). I will now import the file using the XML library, which has been previously loaded.
+
+```{r xml.import}
+xml.url<- "https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.xml"
+xml.raw <- xmlParse(getURL(xml.url))
+```
+
+
+I will now use the `xmlToDataFrame` to convert my file to an R DataFrame. 
+```{r xml.root}
+books.df.fromXML <- xmlToDataFrame(xml.raw)
+datatable(books.df.fromXML)
+```
+
+
+## Read HTML Table Format
+I have copied the HTML table form of the data into [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.html). 
+```{r html.import}
+html.url<- "https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.html"
+html.raw <- read_html(html.url)
+```
+
+I will now use the `html_table` function from the `rvest` library to import the table into a DataFrame. SInce my file has only one table, I can safely choose the first element returned from the `html_table` function. I have also used the `mutate_all` function to replace all empty spaces with NA.
+```{r html.table.to.dataframe}
+allTablesFromHTML<- html.raw %>%  html_table(fill = T,header = T, trim = T)
+books.df.fromHTML <- allTablesFromHTML[[1]] %>% 
+  mutate_all(list(~na_if(.,"")))
+```
+
+## Read JSON Format
+I have copied the JSON form of the data into [github](https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.json).  In my file I stored the information about the three books in a JSON array.
+```{r json.import}
+json.url<- "https://raw.githubusercontent.com/bharbans/DATA607_HW/main/Week%207/books.json"
+json.raw <- fromJSON(getURL(json.url))
+```
+
