@@ -82,5 +82,5 @@ There are many different ways to obtain data in R, in this assignment we are con
 
 all_equal(books.df.fromHTML,books.df.fromJSON)
 all_equal(books.df.fromHTML,books.df.fromXML)
-
+all_equal(books.df.fromJSON,books.df.fromXML)
 ```
