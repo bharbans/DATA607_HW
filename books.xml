@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<books>
+   <book>
+    <Title>Cosmic Queries: StarTalk's Guide to Who We Are, How We Got Here, and Where We're Going</Title>
+    <Author1>Neil DeGrasse Tyson</Author1>
+    <Author2>James Trefil</Author2>
+    <Genre>Philosophy Metaphysics</Genre>
+    <ISBN10>1426221770</ISBN10>
+    <Language>English</Language>
+    <Publisher>National Geographic</Publisher>
+   </book>
+   <book>
+    <Title>How to Avoid a Climate Disaster: The Solutions We Have and the Breakthroughs We Need</Title>
+    <Author1>Bill Gates</Author1>
+    <Genre>Environmental Policy</Genre>
+    <ISBN10>385546130</ISBN10>
+    <Language>English</Language>
+    <Publisher>Knopf</Publisher>
+   </book>
+   <book>
+    <Title>The Code Breaker: Jennifer Doudna, Gene Editing, and the Future of the Human Race</Title>
+    <Author1>Walter Isaacson</Author1>
+    <Genre>Scientist Biographies</Genre>
+    <ISBN10>1982115858</ISBN10>
+    <Language>English</Language>
+    <Publisher>Simon and Schuster</Publisher>    
+   </book>
+</books>
