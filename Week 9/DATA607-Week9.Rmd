@@ -1,0 +1,50 @@
+---
+title: "Week 9 Assignment"
+author: "Brad Harbans"
+date: "4/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(keyring)
+library(tidyverse)
+library(jsonlite)
+library(DT)
+```
+
+## Introduction {.tabset}
+
+In this assignment we have been asked to use the [New York Times Developer API](https://developer.nytimes.com/) to obtain information and pull it into a R data frame. 
+
+### Retrieve API Key
+I will be storing the API Key in the local keychain of my computer, I will use the `keyring` package to access the key. 
+```{r retrieve-api-key}
+api.key<-  keyring::key_get("ny_times_api_key_data607")
+```
+
+### Using the Top Stories API
+For the first example I will use the Top Stories API, to load the top science stories.
+
+```{r get-data-using-top-stories-api}
+
+url <- paste("https://api.nytimes.com/svc/topstories/v2/science.json?api-key=", api.key)
+
+rawDataFromTopStoriesApi <- fromJSON(url,flatten = T)
+resultsDataFrameTopStories <- rawDataFromTopStoriesApi$results
+
+resultsDataFrameTopStories %>% 
+  select( title,section, short_url, abstract) %>% 
+  datatable()
+
+```
+### Display Results Graphically
+
+I will now make a bar graph showing the number of articles per section.
+```{r ggplot-section}
+resultsDataFrameTopStories %>% ggplot(aes(x=section)) +geom_bar()
+```
+
+## Conclusion
+
+As can be seen, it is quite useful and simple to access data using an API that returns JSON.
