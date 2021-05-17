@@ -214,6 +214,7 @@ sample %>%
   group_by(majorityPoverty) %>% 
   summarise( numTrips = n()) %>% 
   mutate(prop = numTrips / sum(numTrips) )  %>% 
+  select( -numTrips) %>% 
   reactable()
 ```
 
@@ -224,10 +225,45 @@ sample %>%
   group_by(majorityWhite) %>% 
   summarise( numTrips = n()) %>% 
   mutate(prop = round(numTrips / sum(numTrips),2) )  %>% 
+  select(-numTrips) %>% 
   reactable()
 ```
 
+### Looking at Routes
+```{r}
+routes <- sample %>% 
+  group_by(route) %>% 
+  summarise( numTrips = n() ) %>% 
+  filter( numTrips > 500) %>% 
+  mutate( routePopScore = (numTrips -min(numTrips) )/ max(numTrips) )
+  
+routes %>% reactable(wrap = T)
+```
+ 
+```{r}
+routes %>% 
+  ggplot(aes(numTrips)) + geom_histogram(binwidth =50)
+```
+ 
 
+## Linear Model To Predict Popularity
+
+```{r}
+s2 <- sample %>% 
+  left_join(( routes %>% select(-numTrips)) ,by=c("route"="route")) %>% 
+  na.omit()
+```
+
+
+```{r}
+model <- lm(routePopScore ~ poverty_prop + white_prop +total_pop + not_us_citizen_prop + borough + tripduration + median_income, data=s2 )
+summary(model)
+```
+
+
+## Conclusion
+
+There is much more information that can be gleamed from the given data sets. Based on data that was obtained from the US census data set, one can get an idea of the demographics of the area's that the stations are located in. Based on this we can see if any of this data is correlated to the popularity of routes that start at a particular station. I would also like to see how weather impacts the use of the program,compare to taxi/lyft data , safety data / traffic patterens, etc. 
 
 ## References
 
