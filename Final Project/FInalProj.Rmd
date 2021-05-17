@@ -1,0 +1,190 @@
+---
+title: "DATA 607 Final Project"
+author: "Brad Harbans"
+date: "5/16/2021"
+output: html_document
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+library(tidyverse)
+library(bigrquery)
+library(reactable)
+library(wk)
+projectid = "data-606-project"
+```
+
+## Introduction
+
+Citi Bike is the nation's largest bike share program, with 20,000 bikes and over 1,300 stations across Manhattan, Brooklyn, Queens, the Bronx and Jersey City. All trip data is publicly available. For the purposed of this assignment I will be using the BigQuery Public data set to explore the data. [@citibike-site]
+
+## Import BigQuery Data  {.tabset}
+
+First I will import the general trip information. 
+
+### A note on reproducability of the sample. 
+In order to make the random sample reproducible I followed instructions from the following [blog post](https://www.oreilly.com/content/repeatable-sampling-of-data-sets-in-bigquery-for-machine-learning/)[@lakshmanan_2016]. Essentially, one computes a hash of a column of interest, which should be similar to a random number, partitions the set using the modulo operation and selects a subset from that partition. This ensures that the same random sample is taken on every run, since we are only choosing where the modulus is less than 1, we should capture roughly 10% of the population. Please note, the following query can be run to obtain a random sample on each run `SELECT *  FROM 'bigquery-public-data.new_york_citibike.citibike_trips' TABLESAMPLE SYSTEM (10 PERCENT)"`. 
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+sampleTripsQuery <- "SELECT 
+                      *,
+                      CONCAT(start_station_name, \" to \", end_station_name) as route,  
+                      EXTRACT(DAYOFWEEK from starttime) as startday,
+                      EXTRACT(MONTH from starttime) as startmonth, 
+                      EXTRACT(YEAR from starttime) as startyear, 
+                      (EXTRACT(YEAR from starttime) - birth_year) as age 
+                    FROM  
+                      `bigquery-public-data.new_york.citibike_trips`
+                    WHERE ABS(MOD(FARM_FINGERPRINT(CAST(starttime AS string )), 10)) < 2"
+
+
+sampleTripsBQTable <- bq_project_query (projectid, sampleTripsQuery )
+sampleTrips <- bq_table_download(sampleTripsBQTable, page_size = 100000)
+
+
+```
+
+I will now import zip code information based on a spatial join with the `data.geo_us_boundaries.zip_codes` public dataset.
+```{r, message=FALSE, warning=FALSE, results='hide'}
+allStationsWithZipQuery <- "SELECT
+    *   
+FROM
+    `bigquery-public-data.new_york.citibike_stations` AS bike_stations,
+    `bigquery-public-data.geo_us_boundaries.zip_codes` AS zip_codes
+WHERE ST_Within(
+        ST_GeogPoint(bike_stations.longitude, bike_stations.latitude),
+         zip_codes.zip_code_geom
+         )
+"
+
+allStationsWithZipQTable <- bq_project_query (projectid, allStationsWithZipQuery )
+allStationsWithZip <- bq_table_download(allStationsWithZipQTable, page_size = 100000)
+```
+
+### Use Census Data Instead of Zip Codes
+
+It was easier to use the US census data to obtain demographic information about the stations. [@petti_2020]
+```{r, message=FALSE, warning=FALSE, results='hide'}
+allStationsCensusDataQuery <- "SELECT * FROM
+(SELECT * 
+  EXCEPT (internal_point_geo, tract_geom)
+FROM `bigquery-public-data.new_york_citibike.citibike_stations` AS bike_stations, 
+  `bigquery-public-data.geo_census_tracts.us_census_tracts_national` AS us_census_tracts_national
+WHERE ST_Within(
+        ST_GeogPoint(bike_stations.longitude, bike_stations.latitude), 
+        us_census_tracts_national.tract_geom)
+) AS table1, `bigquery-public-data.census_bureau_acs.censustract_2018_5yr` as ctract
+WHERE table1.geo_id = ctract.geo_id"
+
+allStationsCensusDataQTable <- bq_project_query (projectid, allStationsCensusDataQuery )
+allStationsCensusData <- bq_table_download(allStationsCensusDataQTable, page_size = 100000)
+
+```
+
+### Obtaining Neighborhood data from CSV 
+
+Using the NYC Neighborhoods data set, I am able to obtain the neigborhood names from the zip codes. [@betanyc_community_data_portal_2020].
+
+```{r}
+zipCodeInfo<-read.csv("https://data.beta.nyc/dataset/0ff93d2d-90ba-457c-9f7e-39e47bf2ac5f/resource/7caac650-d082-4aea-9f9b-3681d568e8a5/download/nyc_zip_borough_neighborhoods_pop.csv") %>% 
+  mutate(zip = as.character(zip)) %>% 
+  select( zip, borough, neighborhood)
+```
+
+
+### Examining Raw Data
+
+```{r}
+dim(sampleTrips )
+```
+
+
+```{r}
+sampleTrips %>% 
+  head(20) %>% 
+  reactable(wrap = F)
+```
+
+```{r}
+allStationsCensusData %>% 
+  head(20) %>% 
+  reactable(wrap=F)
+```
+
+
+```{r}
+zipCodeInfo %>% 
+  reactable(wrap=T)
+```
+
+
+
+### Combine Data
+
+```{r}
+allStationsWithZip <- allStationsWithZip %>% 
+  select( -ends_with("_geom")) %>% 
+  right_join(zipCodeInfo,by = c("zip_code"="zip")) %>% 
+  select( station_id,zip_code, borough ,neighborhood ) 
+```
+
+
+```{r}
+allStationData <- 
+  allStationsCensusData %>% 
+  left_join(allStationsWithZip, by = c("station_id"="station_id")) 
+```
+
+```{r}
+sample <- sampleTrips %>% 
+  select( tripduration , start_station_id, start_station_name , end_station_id, 
+          end_station_name, usertype, birth_year, gender, route, startday, 
+          startmonth, startyear , age) %>% 
+  left_join(allStationData, by = c("start_station_id"="station_id") )
+```
+
+### Final Data Raw
+
+```{r}
+sample %>% 
+  head(100) %>% 
+  reactable(wrap=F)
+```
+
+
+
+## Tidying/Transforming Data{.tabset}
+
+### Truncate Unnecessary Columns
+
+```{r}
+sample <- sample %>% 
+  select(tripduration, start_station_name, route, total_pop, white_pop, not_us_citizen_pop, median_income,poverty ,zip_code, borough ,neighborhood  ) 
+
+```
+
+
+### Convert Population Information to Proportions
+
+```{r}
+sample <- sample %>% 
+  mutate(white_prop = white_pop/total_pop , not_us_citizen_prop = not_us_citizen_pop/total_pop, poverty_prop = poverty/total_pop ) %>% 
+  select( -white_pop, - not_us_citizen_pop, -poverty) %>% 
+  na.omit()
+
+```
+
+
+### Preview Data
+```{r}
+sample %>% 
+  head(100) %>% 
+  reactable(wrap=F)
+```
+
+## Analysis{.tabset}
+
+## References
+
+
