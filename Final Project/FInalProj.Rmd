@@ -170,8 +170,8 @@ sample <- sample %>%
 ```{r}
 sample <- sample %>% 
   mutate(white_prop = white_pop/total_pop , not_us_citizen_prop = not_us_citizen_pop/total_pop, poverty_prop = poverty/total_pop ) %>% 
-  select( -white_pop, - not_us_citizen_pop, -poverty) %>% 
-  na.omit()
+  na.omit() %>% 
+  mutate(route = as.factor(route), start_station_name = as.factor(start_station_name), borough = as.factor(borough), neighborhood = as.factor(neighborhood))
 
 ```
 
@@ -184,6 +184,50 @@ sample %>%
 ```
 
 ## Analysis{.tabset}
+
+### Number of Trips by Borough
+
+```{r}
+sample %>% 
+  group_by(borough) %>% 
+  summarise( numTrips = n() , ) %>% 
+  mutate( prop = round(numTrips / sum(numTrips),3) ) %>% 
+  select( -numTrips) %>% 
+  reactable()
+```
+
+```{r}
+allStationData %>%  
+  select(name, borough) %>% 
+  group_by(borough) %>% 
+  summarise( numStations = n()) %>% 
+  mutate(prop = round(numStations / sum(numStations),2) )  %>% 
+  reactable()
+```
+
+
+### Number of Trips by Poverty Level of Start Station
+
+```{r}
+sample %>% 
+  mutate(majorityPoverty = ifelse(poverty_prop >= .5 , 1, 0)) %>% 
+  group_by(majorityPoverty) %>% 
+  summarise( numTrips = n()) %>% 
+  mutate(prop = numTrips / sum(numTrips) )  %>% 
+  reactable()
+```
+
+### Number of Trips by Ethnicity of Start Station
+```{r}
+sample %>% 
+  mutate(majorityWhite = ifelse(white_prop >= .5 , 1, 0)) %>% 
+  group_by(majorityWhite) %>% 
+  summarise( numTrips = n()) %>% 
+  mutate(prop = round(numTrips / sum(numTrips),2) )  %>% 
+  reactable()
+```
+
+
 
 ## References
 
